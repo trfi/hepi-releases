@@ -8,7 +8,7 @@ Hepi is a lightweight desktop overlay application that brings seamless AI assist
 
 ## ✨ Features
 
-- **Find Quiz Answers Fast**  
+- **✔ Find Quiz Answers Fast**  
   Instantly look up answers using Agentic RAG — perfect for students and learners.
 
 - **🤖 AI Chat Assistant**  
