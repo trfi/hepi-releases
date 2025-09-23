@@ -18,6 +18,12 @@ Hepi is a lightweight desktop overlay application that brings seamless AI assist
   Real-time transcription, insights, and AI-generated summaries.  
   → **Adaptive Profiles**: Tailored AI behavior for *Interviews*, *Homework*, *Meetings*, and *Presentations*.
 
+- **🔒 Content Protection**  
+  Prevents screenshots, screen recording, and screen sharing — ideal for secure environments like exams or confidential meetings.
+
+- **🙈 Hide from Taskbar**  
+  Keeps Hepi discreet and out of sight during study or work sessions.
+
 ---
 
 ## 🖥️ Supported Platforms
@@ -43,8 +49,6 @@ Choose the installer for your system:
 | **Windows**    | `Hepi_0.1.2_x64-setup.exe`         | [Download](https://github.com/trfi/hepi-releases/releases/download/hepi-v0.1.2-beta/Hepi_0.1.2_x64-setup.exe) |
 | **macOS (Apple Silicon)** | `Hepi_0.1.2_aarch64.dmg`      | [Download](https://github.com/trfi/hepi-releases/releases/download/hepi-v0.1.2-beta/Hepi_0.1.2_aarch64.dmg) |
 | **macOS (Intel)**         | `Hepi_0.1.2_x64.dmg`          | [Download](https://github.com/trfi/hepi-releases/releases/download/hepi-v0.1.2-beta/Hepi_0.1.2_x64.dmg) |
-
-> 🔗 *Replace `YOUR_USERNAME` and `myapp-releases` with your actual GitHub username and public repo name.*
 
 ---
 
@@ -95,10 +99,8 @@ Read our full [Privacy Policy](#) *(link to your website or document)*.
 
 ## 🚀 Coming Soon
 
-- Linux support
 - Custom profile creation
-- Voice commands
-- Multi-monitor awareness
+- Note taking
 
 ---
 
