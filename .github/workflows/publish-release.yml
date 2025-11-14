@@ -1,0 +1,135 @@
+name: "publish-release"
+
+on:
+  push:
+    branches:
+      - release
+
+jobs:
+  publish-tauri:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: "macos-latest" # for Arm based macs (M1 and above).
+            args: "--target aarch64-apple-darwin"
+          - platform: "macos-latest" # for Intel based macs.
+            args: "--target x86_64-apple-darwin"
+          - platform: "ubuntu-24.04" # for Tauri v2
+            args: ""
+          - platform: "windows-latest"
+            args: ""
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout public repository
+        uses: actions/checkout@v4
+
+      - name: Clone private repository (source code)
+        run: |
+          git clone https://x-access-token:${{ secrets.PRIVATE_REPO_PAT }}@github.com/${{ secrets.PRIVATE_REPO_OWNER }}/easy-assist.git ./private-repo
+
+      - name: Get version from private repo
+        id: get-version
+        run: |
+          VERSION=$(grep -o '"version": "[^"]*"' ./private-repo/src-tauri/tauri.conf.json | head -1 | sed 's/"version": "\(.*\)"/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: setup bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          # Those targets are only used on macos runners so it's in an `if` to slightly speed up windows and linux builds.
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: install dependencies (ubuntu only)
+        if: matrix.platform == 'ubuntu-24.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libpipewire-0.3-dev libglib2.0-dev libgbm-dev
+        # Using webkitgtk 4.1 for Tauri v2
+
+      - name: install frontend dependencies
+        working-directory: ./private-repo
+        run: bun install
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Standard token for publishing to current repo
+          # Signing keys for updater
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # Fingerprint secret
+          FINGERPRINT_SECRET_PART_1: ${{ secrets.FINGERPRINT_SECRET_PART_1 }}
+          FINGERPRINT_SECRET_PART_2: ${{ secrets.FINGERPRINT_SECRET_PART_2 }}
+          FINGERPRINT_SECRET_PART_3: ${{ secrets.FINGERPRINT_SECRET_PART_3 }}
+          # Build-time environment variables
+          PUBLIC_R2_PUBLIC_URL: ${{ vars.PUBLIC_R2_PUBLIC_URL || 'https://storage.easyquiz.cc' }}
+          PUBLIC_API_URL: ${{ vars.PUBLIC_API_URL || 'https://api.hepi.help' }}
+          PUBLIC_AUTH_API_URL: ${{ vars.PUBLIC_AUTH_API_URL || 'https://api.hepi.help/auth' }}
+          PUBLIC_EASY_API_URL: ${{ vars.PUBLIC_EASY_API_URL || 'https://api.easyquiz.cc' }}
+          PUBLIC_EASY_AUTH_API_URL: ${{ vars.PUBLIC_EASY_AUTH_API_URL || 'https://auth.easyquiz.cc' }}
+        with:
+          projectPath: ./private-repo
+          tagName: v__VERSION__ # the action automatically replaces __VERSION__ with the app version.
+          releaseName: "Hepi v__VERSION__"
+          releaseBody: "See the assets to download this version and install."
+          releaseDraft: true  # Keep as draft until all platforms finish
+          prerelease: false
+          args: ${{ matrix.args }}
+
+  publish-release:
+    needs: publish-tauri
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout public repository
+        uses: actions/checkout@v4
+
+      - name: Clone private repository to get version
+        run: |
+          git clone https://x-access-token:${{ secrets.PRIVATE_REPO_PAT }}@github.com/${{ secrets.PRIVATE_REPO_OWNER }}/easy-assist.git ./private-repo
+
+      - name: Get version
+        id: get-version
+        run: |
+          VERSION=$(grep -o '"version": "[^"]*"' ./private-repo/src-tauri/tauri.conf.json | head -1 | sed 's/"version": "\(.*\)"/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Publish draft release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Get the draft release by tag
+          RELEASE_ID=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/tags/v${{ steps.get-version.outputs.version }}" \
+            | jq -r '.id')
+
+          if [ "$RELEASE_ID" != "null" ] && [ ! -z "$RELEASE_ID" ]; then
+            echo "Publishing release ID: $RELEASE_ID"
+
+            # Publish the release (change draft: true to draft: false)
+            curl -X PATCH \
+              -H "Authorization: token $GITHUB_TOKEN" \
+              -H "Content-Type: application/json" \
+              "https://api.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID" \
+              -d '{"draft": false}'
+
+            echo "Release published successfully!"
+          else
+            echo "Error: Could not find draft release"
+            exit 1
+          fi
