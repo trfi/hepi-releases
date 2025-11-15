@@ -115,13 +115,18 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Get the draft release by tag
-          RELEASE_ID=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-            "https://api.github.com/repos/${{ github.repository }}/releases/tags/v${{ steps.get-version.outputs.version }}" \
-            | jq -r '.id')
+          VERSION="${{ steps.get-version.outputs.version }}"
+          echo "Looking for draft release with tag v$VERSION..."
 
-          if [ "$RELEASE_ID" != "null" ] && [ ! -z "$RELEASE_ID" ]; then
-            echo "Publishing release ID: $RELEASE_ID"
+          # Get all releases and find the draft with matching tag
+          RELEASE_ID=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/releases" \
+            | jq -r ".[] | select(.draft == true and .tag_name == \"v$VERSION\") | .id" \
+            | head -1)
+
+          if [ -n "$RELEASE_ID" ] && [ "$RELEASE_ID" != "null" ]; then
+            echo "Found draft release ID: $RELEASE_ID"
+            echo "Publishing release..."
 
             # Publish the release (change draft: true to draft: false)
             curl -X PATCH \
@@ -130,8 +135,12 @@ jobs:
               "https://api.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID" \
               -d '{"draft": false}'
 
-            echo "Release published successfully!"
+            echo "✅ Release v$VERSION published successfully!"
           else
-            echo "Error: Could not find draft release"
+            echo "❌ Error: Could not find draft release for tag v$VERSION"
+            echo "Listing all releases:"
+            curl -s -H "Authorization: token $GITHUB_TOKEN" \
+              "https://api.github.com/repos/${{ github.repository }}/releases" \
+              | jq -r '.[] | "\(.tag_name) - Draft: \(.draft)"'
             exit 1
           fi
