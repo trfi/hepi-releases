@@ -77,11 +77,11 @@ jobs:
           FINGERPRINT_SECRET_PART_2: ${{ secrets.FINGERPRINT_SECRET_PART_2 }}
           FINGERPRINT_SECRET_PART_3: ${{ secrets.FINGERPRINT_SECRET_PART_3 }}
           # Build-time environment variables
-          PUBLIC_R2_PUBLIC_URL: ${{ vars.PUBLIC_R2_PUBLIC_URL || 'https://storage.easyquiz.cc' }}
-          PUBLIC_API_URL: ${{ vars.PUBLIC_API_URL || 'https://api.hepi.help' }}
-          PUBLIC_AUTH_API_URL: ${{ vars.PUBLIC_AUTH_API_URL || 'https://api.hepi.help/auth' }}
-          PUBLIC_EASY_API_URL: ${{ vars.PUBLIC_EASY_API_URL || 'https://api.easyquiz.cc' }}
-          PUBLIC_EASY_AUTH_API_URL: ${{ vars.PUBLIC_EASY_AUTH_API_URL || 'https://auth.easyquiz.cc' }}
+          VITE_PUBLIC_R2_PUBLIC_URL: ${{ vars.VITE_PUBLIC_R2_PUBLIC_URL || 'https://storage.easyquiz.cc' }}
+          VITE_PUBLIC_API_URL: ${{ vars.VITE_PUBLIC_API_URL || 'https://api.hepi.help' }}
+          VITE_PUBLIC_AUTH_API_URL: ${{ vars.VITE_PUBLIC_AUTH_API_URL || 'https://api.hepi.help/auth' }}
+          VITE_PUBLIC_EASY_API_URL: ${{ vars.VITE_PUBLIC_EASY_API_URL || 'https://api.easyquiz.cc' }}
+          VITE_PUBLIC_EASY_AUTH_API_URL: ${{ vars.VITE_PUBLIC_EASY_AUTH_API_URL || 'https://auth.easyquiz.cc' }}
         with:
           projectPath: ./private-repo
           tagName: v__VERSION__ # the action automatically replaces __VERSION__ with the app version.
@@ -133,7 +133,7 @@ jobs:
               -H "Authorization: token $GITHUB_TOKEN" \
               -H "Content-Type: application/json" \
               "https://api.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID" \
-              -d '{"draft": false}'
+              -d '{"draft": true}'
 
             echo "✅ Release v$VERSION published successfully!"
           else
