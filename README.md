@@ -46,16 +46,16 @@ Choose the installer for your system:
 
 | Platform       | File Name                          | Download Link |
 |----------------|------------------------------------|---------------|
-| **Windows**    | `Hepi_0.1.2_x64-setup.exe`         | [Download](https://github.com/trfi/hepi-releases/releases/download/hepi-v0.1.2-beta/Hepi_0.1.2_x64-setup.exe) |
-| **macOS (Apple Silicon)** | `Hepi_0.1.2_aarch64.dmg`      | [Download](https://github.com/trfi/hepi-releases/releases/download/hepi-v0.1.2-beta/Hepi_0.1.2_aarch64.dmg) |
-| **macOS (Intel)**         | `Hepi_0.1.2_x64.dmg`          | [Download](https://github.com/trfi/hepi-releases/releases/download/hepi-v0.1.2-beta/Hepi_0.1.2_x64.dmg) |
-
+| **Windows**    | `Hepi_0.6.0_x64-setup.exe`         | [Download](https://github.com/trfi/hepi-releases/releases/download/v0.6.0/Hepi_0.6.0_x64-setup.exe) |
+| **macOS (Apple Silicon)** | `Hepi_0.6.0_aarch64.dmg`      | [Download](https://github.com/trfi/hepi-releases/releases/download/v0.6.0/Hepi_0.6.0_aarch64.dmg) |
+| **macOS (Intel)**         | `Hepi_0.6.0_x64.dmg`          | [Download](https://github.com/trfi/hepi-releases/releases/download/v0.6.0/Hepi_0.6.0_x64.dmg) |
+| **Linux**         | `Hepi_0.6.0_x64.AppImage`          | [Download](https://github.com/trfi/hepi-releases/releases/download/v0.6.0/Hepi_0.6.0_x64.AppImage) |
 ---
 
 ## 🛠️ Installation Guide
 
 ### **Windows**
-1. Download `Hepi_0.1.2_x64-setup.exe`
+1. Download `Hepi_0.6.0_x64-setup.exe`
 2. Double-click to run the installer
 3. Follow the setup wizard
 4. Launch Hepi from your Start Menu
