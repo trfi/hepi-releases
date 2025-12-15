@@ -93,7 +93,7 @@ Want to suggest a new profile or integration? We’d love to hear from you!
 ## 🔐 Privacy Notice
 
 Hepi processes screen content locally when possible. Some features may require sending data to secure AI APIs for processing. We do not store your screen captures or personal data.  
-Read our full [Privacy Policy](#).
+Read our full [Privacy Policy](https://hepi.help/privacy).
 
 ---
 
