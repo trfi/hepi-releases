@@ -101,6 +101,7 @@ Read our full [Privacy Policy](#).
 
 - Custom profile creation
 - Note taking
+- Screen translation
 
 ---
 
