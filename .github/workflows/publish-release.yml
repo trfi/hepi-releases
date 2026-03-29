@@ -1,9 +1,11 @@
 name: "publish-release"
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
   push:
-    branches:
-      - release
+    branches: [ "main", "release" ]
 
 jobs:
   publish-tauri:
@@ -59,7 +61,7 @@ jobs:
         if: matrix.platform == 'ubuntu-24.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libpipewire-0.3-dev libglib2.0-dev libgbm-dev
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libpipewire-0.3-dev libglib2.0-dev libgbm-dev libasound2-dev
         # Using webkitgtk 4.1 for Tauri v2
 
       - name: install frontend dependencies
