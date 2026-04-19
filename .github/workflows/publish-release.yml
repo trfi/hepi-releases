@@ -79,6 +79,9 @@ jobs:
           FINGERPRINT_SECRET_PART_1: ${{ secrets.FINGERPRINT_SECRET_PART_1 }}
           FINGERPRINT_SECRET_PART_2: ${{ secrets.FINGERPRINT_SECRET_PART_2 }}
           FINGERPRINT_SECRET_PART_3: ${{ secrets.FINGERPRINT_SECRET_PART_3 }}
+          # Entitlement verification key used by Rust receipt validation
+          ENTITLEMENT_SIGNING_KEY_ID: ${{ secrets.ENTITLEMENT_SIGNING_KEY_ID }}
+          ENTITLEMENT_PUBLIC_KEY: ${{ secrets.ENTITLEMENT_PUBLIC_KEY }}
           # Build-time environment variables
           VITE_PUBLIC_R2_PUBLIC_URL: ${{ vars.VITE_PUBLIC_R2_PUBLIC_URL || 'https://storage.easyquiz.cc' }}
           VITE_PUBLIC_API_URL: ${{ vars.VITE_PUBLIC_API_URL || 'https://api.hepi.help' }}
