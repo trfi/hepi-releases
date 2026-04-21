@@ -18,12 +18,16 @@ jobs:
         include:
           - platform: "macos-latest" # for Arm based macs (M1 and above).
             args: "--target aarch64-apple-darwin"
+            bundle_sidekick: false
           - platform: "macos-latest" # for Intel based macs.
             args: "--target x86_64-apple-darwin"
+            bundle_sidekick: false
           - platform: "ubuntu-24.04" # for Tauri v2
             args: ""
+            bundle_sidekick: false
           - platform: "windows-latest"
             args: ""
+            bundle_sidekick: true
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -68,6 +72,13 @@ jobs:
       - name: install frontend dependencies
         working-directory: ./private-repo
         run: bun install
+
+      - name: Remove Windows-only sidekick from non-Windows bundles
+        if: ${{ !matrix.bundle_sidekick }}
+        shell: bash
+        working-directory: ./private-repo
+        run: |
+          node -e "const fs=require('fs'); const path='./src-tauri/tauri.conf.json'; const config=JSON.parse(fs.readFileSync(path, 'utf8')); config.bundle ??= {}; delete config.bundle.externalBin; fs.writeFileSync(path, JSON.stringify(config, null, 2) + '\n');"
 
       - uses: tauri-apps/tauri-action@v0
         env:
