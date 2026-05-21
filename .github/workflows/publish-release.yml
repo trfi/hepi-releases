@@ -146,13 +146,20 @@ jobs:
             echo "Publishing release..."
 
             # Publish the release (change draft: true to draft: false)
-            curl -X PATCH \
+            curl --fail-with-body -X PATCH \
               -H "Authorization: token $GITHUB_TOKEN" \
               -H "Content-Type: application/json" \
               "https://api.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID" \
               -d '{"draft": false}'
 
             echo "✅ Release v$VERSION published successfully!"
+
+            echo "Updating Dub links for v$VERSION..."
+            curl --fail-with-body -X POST \
+              -H "X-Admin-Secret: ${{ secrets.ADMIN_SECRET }}" \
+              -H "Content-Type: application/json" \
+              "${{ vars.VITE_PUBLIC_API_URL || 'https://api.hepi.help' }}/update-links" \
+              -d "{\"version\":\"$VERSION\"}"
           else
             echo "❌ Error: Could not find draft release for tag v$VERSION"
             echo "Listing all releases:"
