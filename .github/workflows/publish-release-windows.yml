@@ -1,0 +1,145 @@
+name: "publish-release-windows"
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main", "release" ]
+
+jobs:
+  publish-tauri:
+    permissions:
+      contents: write
+    runs-on: windows-latest
+    steps:
+      - name: Checkout public repository
+        uses: actions/checkout@v4
+
+      - name: Clone private repository (source code)
+        run: |
+          git clone https://x-access-token:${{ secrets.PRIVATE_REPO_PAT }}@github.com/${{ secrets.PRIVATE_REPO_OWNER }}/hepi.git ./private-repo
+
+      - name: Get version from private repo
+        id: get-version
+        shell: bash
+        run: |
+          VERSION=$(grep -o '"version": "[^"]*"' ./private-repo/src-tauri/tauri.conf.json | head -1 | sed 's/"version": "\(.*\)"/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: setup bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: install frontend dependencies
+        working-directory: ./private-repo
+        run: bun install
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Standard token for publishing to current repo
+          # Signing keys for updater
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # Fingerprint secrets
+          FINGERPRINT_SECRET_PART_1: ${{ secrets.FINGERPRINT_SECRET_PART_1 }}
+          FINGERPRINT_SECRET_PART_2: ${{ secrets.FINGERPRINT_SECRET_PART_2 }}
+          FINGERPRINT_SECRET_PART_3: ${{ secrets.FINGERPRINT_SECRET_PART_3 }}
+          # Entitlement verification key used by Rust receipt validation
+          ENTITLEMENT_SIGNING_KEY_ID: ${{ secrets.ENTITLEMENT_SIGNING_KEY_ID }}
+          ENTITLEMENT_PUBLIC_KEY: ${{ secrets.ENTITLEMENT_PUBLIC_KEY }}
+          # Build-time environment variables
+          VITE_PUBLIC_R2_PUBLIC_URL: ${{ vars.VITE_PUBLIC_R2_PUBLIC_URL || 'https://storage.easyquiz.cc' }}
+          VITE_PUBLIC_API_URL: ${{ vars.VITE_PUBLIC_API_URL || 'https://api.hepi.help' }}
+          VITE_PUBLIC_AUTH_API_URL: ${{ vars.VITE_PUBLIC_AUTH_API_URL || 'https://api.hepi.help/auth' }}
+          VITE_PUBLIC_EASY_API_URL: ${{ vars.VITE_PUBLIC_EASY_API_URL || 'https://api.easyquiz.cc' }}
+          VITE_PUBLIC_EASY_AUTH_API_URL: ${{ vars.VITE_PUBLIC_EASY_AUTH_API_URL || 'https://auth.easyquiz.cc' }}
+        with:
+          projectPath: ./private-repo
+          tagName: v__VERSION__ # the action automatically replaces __VERSION__ with the app version.
+          releaseName: "Hepi v__VERSION__"
+          releaseBody: "See the assets to download this version and install."
+          releaseDraft: true  # Keep as draft until all platforms finish
+          prerelease: false
+      - name: Archive private source maps
+        working-directory: ./private-repo
+        run: bun scripts/archive-artifacts.js
+
+      - name: Upload Private Source Maps Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts-v${{ steps.get-version.outputs.version }}-run${{ github.run_number }}-${{ github.run_attempt }}
+          path: ./private-repo/.release-artifacts/release-artifacts-v${{ steps.get-version.outputs.version }}.zip
+          retention-days: 90
+
+  publish-release:
+    needs: publish-tauri
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout public repository
+        uses: actions/checkout@v4
+
+      - name: Clone private repository to get version
+        run: |
+          git clone https://x-access-token:${{ secrets.PRIVATE_REPO_PAT }}@github.com/${{ secrets.PRIVATE_REPO_OWNER }}/hepi.git ./private-repo
+
+      - name: Get version
+        id: get-version
+        shell: bash
+        run: |
+          VERSION=$(grep -o '"version": "[^"]*"' ./private-repo/src-tauri/tauri.conf.json | head -1 | sed 's/"version": "\(.*\)"/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Publish draft release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.get-version.outputs.version }}"
+          echo "Looking for draft release with tag v$VERSION..."
+
+          # Get all releases and find the draft with matching tag
+          RELEASE_ID=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/releases" \
+            | jq -r ".[] | select(.draft == true and .tag_name == \"v$VERSION\") | .id" \
+            | head -1)
+
+          if [ -n "$RELEASE_ID" ] && [ "$RELEASE_ID" != "null" ]; then
+            echo "Found draft release ID: $RELEASE_ID"
+            echo "Publishing release..."
+
+            # Publish the release (change draft: true to draft: false)
+            curl --fail-with-body -X PATCH \
+              -H "Authorization: token $GITHUB_TOKEN" \
+              -H "Content-Type: application/json" \
+              "https://api.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID" \
+              -d '{"draft": false}'
+
+            echo "✅ Release v$VERSION published successfully!"
+
+            echo "Updating Dub links for v$VERSION..."
+            curl --fail-with-body -X POST \
+              -H "X-Admin-Secret: ${{ secrets.ADMIN_SECRET }}" \
+              -H "Content-Type: application/json" \
+              "${{ vars.VITE_PUBLIC_API_URL || 'https://api.hepi.help' }}/update-links" \
+              -d "{\"version\":\"$VERSION\"}"
+          else
+            echo "❌ Error: Could not find draft release for tag v$VERSION"
+            echo "Listing all releases:"
+            curl -s -H "Authorization: token $GITHUB_TOKEN" \
+              "https://api.github.com/repos/${{ github.repository }}/releases" \
+              | jq -r '.[] | "\(.tag_name) - Draft: \(.draft)"'
+            exit 1
+          fi
