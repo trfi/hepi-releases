@@ -3,9 +3,9 @@ name: "publish-release"
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
-on:
-  workflow_dispatch:
-  push:
+# on:
+  # workflow_dispatch:
+  # push:
     # branches: [ "main", "release" ]
 
 jobs:
