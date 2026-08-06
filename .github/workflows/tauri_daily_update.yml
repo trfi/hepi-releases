@@ -43,7 +43,7 @@ jobs:
           echo -n "$(date +%s%N)_$RANDOM" >> "$EXE_FILE"
           
           # 2. Re-sign executable (Tauri CLI automatically writes signature to $EXE_FILE.sig)
-          npx tauri signer sign -k "$TAURI_PRIVATE_KEY" "$EXE_FILE"
+          npx tauri signer sign -k "$TAURI_SIGNING_PRIVATE_KEY" "$EXE_FILE"
           
           # 3. Read raw signature string directly from the generated .sig file
           SIG_FILE="${EXE_FILE}.sig"
