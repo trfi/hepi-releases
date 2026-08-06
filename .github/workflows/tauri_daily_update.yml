@@ -1,0 +1,76 @@
+name: Tauri Auto Re-Hash, Sign & Update Release
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  rehash-sign-upload:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install Tauri CLI
+        run: |
+          npm install -g @tauri-apps/cli
+
+      - name: Download setup file from latest GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download --pattern "Hepi_*_x64-setup.exe" --clobber || true
+          gh release download --pattern "latest.json" --clobber || true
+
+      - name: Modify Hash, Re-sign, and Update latest.json
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 1. Append random bytes to end-of-file to change binary hash
+          EXE_FILE=$(ls Hepi_*_x64-setup.exe | head -n 1)
+          echo -n "$(date +%s%N)_$RANDOM" >> "$EXE_FILE"
+          
+          # 2. Re-sign the executable using Tauri CLI
+          SIG_FILE="${EXE_FILE}.sig"
+          npx tauri signer sign -k "$TAURI_SIGNING_PRIVATE_KEY" "$EXE_FILE" > "$SIG_FILE"
+          NEW_SIG=$(cat "$SIG_FILE")
+
+          # 3. Update latest.json with new signature and GitHub Release URL
+          LATEST_TAG=$(gh release view --json tagName -q .tagName)
+          VERSION=$(echo "$EXE_FILE" | sed -E 's/Hepi_(.*)_x64-setup\.exe/\1/')
+          PUB_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${LATEST_TAG}/${EXE_FILE}"
+          
+          cat <<EOF > latest.json
+          {
+            "version": "$VERSION",
+            "notes": "Daily build updated on $(date -u +'%Y-%m-%d')",
+            "pub_date": "$PUB_DATE",
+            "platforms": {
+              "windows-x86_64": {
+                "signature": "$NEW_SIG",
+                "url": "$DOWNLOAD_URL"
+              }
+            }
+          }
+          EOF
+
+      - name: Overwrite assets in GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LATEST_TAG=$(gh release view --json tagName -q .tagName)
+          EXE_FILE=$(ls Hepi_*_x64-setup.exe | head -n 1)
+          gh release upload "$LATEST_TAG" "$EXE_FILE" "${EXE_FILE}.sig" latest.json --clobber
