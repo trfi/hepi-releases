@@ -42,12 +42,14 @@ jobs:
           EXE_FILE=$(ls Hepi_*_x64-setup.exe | head -n 1)
           echo -n "$(date +%s%N)_$RANDOM" >> "$EXE_FILE"
           
-          # 2. Re-sign the executable using Tauri CLI
+          # 2. Re-sign executable (Tauri CLI automatically writes signature to $EXE_FILE.sig)
+          npx tauri signer sign -k "$TAURI_PRIVATE_KEY" "$EXE_FILE"
+          
+          # 3. Read raw signature string directly from the generated .sig file
           SIG_FILE="${EXE_FILE}.sig"
-          npx tauri signer sign -k "$TAURI_SIGNING_PRIVATE_KEY" "$EXE_FILE" > "$SIG_FILE"
           NEW_SIG=$(cat "$SIG_FILE")
 
-          # 3. Update latest.json with new signature and GitHub Release URL
+          # 4. Generate latest.json with clean signature and platform targets
           LATEST_TAG=$(gh release view --json tagName -q .tagName)
           VERSION=$(echo "$EXE_FILE" | sed -E 's/Hepi_(.*)_x64-setup\.exe/\1/')
           PUB_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
@@ -60,6 +62,10 @@ jobs:
             "pub_date": "$PUB_DATE",
             "platforms": {
               "windows-x86_64": {
+                "signature": "$NEW_SIG",
+                "url": "$DOWNLOAD_URL"
+              },
+              "windows-x86_64-nsis": {
                 "signature": "$NEW_SIG",
                 "url": "$DOWNLOAD_URL"
               }
