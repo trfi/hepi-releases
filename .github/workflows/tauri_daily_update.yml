@@ -49,29 +49,25 @@ jobs:
           SIG_FILE="${EXE_FILE}.sig"
           NEW_SIG=$(cat "$SIG_FILE")
 
-          # 4. Generate latest.json with clean signature and platform targets
+          # 4. Update existing latest.json using 'jq' to preserve other platforms (msi, etc.)
           LATEST_TAG=$(gh release view --json tagName -q .tagName)
           VERSION=$(echo "$EXE_FILE" | sed -E 's/Hepi_(.*)_x64-setup\.exe/\1/')
           PUB_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${LATEST_TAG}/${EXE_FILE}"
           
-          cat <<EOF > latest.json
-          {
-            "version": "$VERSION",
-            "notes": "Daily build updated on $(date -u +'%Y-%m-%d')",
-            "pub_date": "$PUB_DATE",
-            "platforms": {
-              "windows-x86_64": {
-                "signature": "$NEW_SIG",
-                "url": "$DOWNLOAD_URL"
-              },
-              "windows-x86_64-nsis": {
-                "signature": "$NEW_SIG",
-                "url": "$DOWNLOAD_URL"
-              }
-            }
-          }
-          EOF
+          # If the latest.json file downloaded does not exist, create a basic JSON structure first
+          if [ ! -f "latest.json" ]; then
+            echo '{"version":"","notes":"","pub_date":"","platforms":{}}' > latest.json
+          fi
+
+          # Use jq to update the version, pub_date, and overwrite the platform specifically with windows-x86_64-nsis
+          jq --arg ver "$VERSION" \
+             --arg date "$PUB_DATE" \
+             --arg notes "Daily build updated on $(date -u +'%Y-%m-%d')" \
+             --arg sig "$NEW_SIG" \
+             --arg url "$DOWNLOAD_URL" \
+             '.version = $ver | .pub_date = $date | .notes = $notes | .platforms["windows-x86_64-nsis"] = {"signature": $sig, "url": $url}' \
+             latest.json > latest_temp.json && mv latest_temp.json latest.json
 
       - name: Overwrite assets in GitHub Release
         env:
