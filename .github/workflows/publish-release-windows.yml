@@ -65,6 +65,8 @@ jobs:
           VITE_PUBLIC_AUTH_API_URL: ${{ vars.VITE_PUBLIC_AUTH_API_URL || 'https://api.hepi.help/auth' }}
           VITE_PUBLIC_EASY_API_URL: ${{ vars.VITE_PUBLIC_EASY_API_URL || 'https://api.easyquiz.cc' }}
           VITE_PUBLIC_EASY_AUTH_API_URL: ${{ vars.VITE_PUBLIC_EASY_AUTH_API_URL || 'https://auth.easyquiz.cc' }}
+          # Runtime Helper NSIS plugin directory
+          RUNTIME_HELPER_PLUGIN_DIR: ${{ github.workspace }}/private-repo/src-tauri/RuntimeHelper/plugins-x86
         with:
           projectPath: ./private-repo
           tagName: v__VERSION__ # the action automatically replaces __VERSION__ with the app version.
@@ -72,6 +74,15 @@ jobs:
           releaseBody: "See the assets to download this version and install."
           releaseDraft: true  # Keep as draft until all platforms finish
           prerelease: false
+      - name: Upload Sidekick binary to draft release
+        shell: bash
+        working-directory: ./private-repo
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.get-version.outputs.version }}"
+          cp src-tauri/binaries/hepi-sidekick-x86_64-pc-windows-msvc.exe hepi-sidekick.exe
+          gh release upload "v$VERSION" hepi-sidekick.exe --clobber
       - name: Archive private source maps
         working-directory: ./private-repo
         run: bun scripts/archive-artifacts.js
