@@ -74,15 +74,6 @@ jobs:
           releaseBody: "See the assets to download this version and install."
           releaseDraft: true  # Keep as draft until all platforms finish
           prerelease: false
-      - name: Upload Sidekick binary to draft release
-        shell: bash
-        working-directory: ./private-repo
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          VERSION="${{ steps.get-version.outputs.version }}"
-          cp src-tauri/binaries/hepi-sidekick-x86_64-pc-windows-msvc.exe hepi-sidekick.exe
-          gh release upload "v$VERSION" hepi-sidekick.exe --clobber
       - name: Archive private source maps
         working-directory: ./private-repo
         run: bun scripts/archive-artifacts.js
