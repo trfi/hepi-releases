@@ -74,6 +74,59 @@ jobs:
           releaseBody: "See the assets to download this version and install."
           releaseDraft: true  # Keep as draft until all platforms finish
           prerelease: false
+
+      - name: Package Portable ZIP
+        shell: pwsh
+        working-directory: ./private-repo
+        run: |
+          $VERSION = "${{ steps.get-version.outputs.version }}"
+          $PortableDir = "./dist-portable"
+          if (Test-Path $PortableDir) { Remove-Item -Recurse -Force $PortableDir }
+          New-Item -ItemType Directory -Path $PortableDir -Force | Out-Null
+
+          # Copy main executable as Hepi.exe
+          $MainExe = "./src-tauri/target/release/hepi.exe"
+          if (-not (Test-Path $MainExe)) {
+              $MainExe = "./src-tauri/target/release/Hepi.exe"
+          }
+          if (-not (Test-Path $MainExe)) {
+              throw "Main executable not found in src-tauri/target/release/"
+          }
+          Copy-Item -Path $MainExe -Destination "$PortableDir/Hepi.exe" -Force
+
+          # Copy sidekick binary as sidekick.exe
+          $SidekickSrc = "./src-tauri/binaries/sidekick-x86_64-pc-windows-msvc.exe"
+          if (Test-Path $SidekickSrc) {
+              Copy-Item -Path $SidekickSrc -Destination "$PortableDir/sidekick.exe" -Force
+          } else {
+              Write-Warning "Sidekick binary not found at $SidekickSrc"
+          }
+
+          # Add helpful README.txt
+          @"
+          Hepi Portable (v$VERSION)
+          ========================
+          Instructions:
+          1. Extract all files from this archive into a permanent folder (e.g. C:\Tools\Hepi or a USB drive).
+          2. Do NOT run Hepi.exe directly from inside the ZIP file without extracting.
+          3. Launch Hepi.exe to start.
+          "@ | Out-File -FilePath "$PortableDir/README.txt" -Encoding utf8
+
+          $ZipName = "Hepi_${VERSION}_x64-portable.zip"
+          Compress-Archive -Path "$PortableDir/*" -DestinationPath "./$ZipName" -Force
+          Write-Host "Portable ZIP created successfully: $ZipName"
+
+      - name: Upload Portable ZIP to Draft Release
+        shell: bash
+        working-directory: ./private-repo
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.get-version.outputs.version }}"
+          ZIP_NAME="Hepi_${VERSION}_x64-portable.zip"
+          echo "Uploading $ZIP_NAME to release v$VERSION in ${{ github.repository }}..."
+          gh release upload "v$VERSION" "$ZIP_NAME" --repo "${{ github.repository }}" --clobber
+
       - name: Archive private source maps
         working-directory: ./private-repo
         run: bun scripts/archive-artifacts.js
