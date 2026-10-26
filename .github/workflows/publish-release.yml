@@ -86,10 +86,8 @@ jobs:
           # Signing keys for updater
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          # Fingerprint secrets
-          FINGERPRINT_SECRET_PART_1: ${{ secrets.FINGERPRINT_SECRET_PART_1 }}
-          FINGERPRINT_SECRET_PART_2: ${{ secrets.FINGERPRINT_SECRET_PART_2 }}
-          FINGERPRINT_SECRET_PART_3: ${{ secrets.FINGERPRINT_SECRET_PART_3 }}
+          CARGO_TERM_VERBOSE: "false"
+          FINGERPRINT_SECRET: ${{ secrets.FINGERPRINT_SECRET }}
           # Entitlement verification key used by Rust receipt validation
           ENTITLEMENT_SIGNING_KEY_ID: ${{ secrets.ENTITLEMENT_SIGNING_KEY_ID }}
           ENTITLEMENT_PUBLIC_KEY: ${{ secrets.ENTITLEMENT_PUBLIC_KEY }}
