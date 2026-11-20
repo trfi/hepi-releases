@@ -69,6 +69,19 @@ jobs:
           "VULKAN_SDK=$sdkRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "$sdkRoot\Bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
+      - name: Install SPIRV-Headers (CMake config required by ggml-vulkan)
+        shell: pwsh
+        run: |
+          $src = Join-Path $env:RUNNER_TEMP "SPIRV-Headers"
+          $prefix = "C:\SPIRV-Headers"
+          git clone --depth 1 --branch vulkan-sdk-1.4.313.0 https://github.com/KhronosGroup/SPIRV-Headers.git $src
+          if ($LASTEXITCODE -ne 0) { throw "Failed to clone SPIRV-Headers" }
+          cmake -S $src -B "$src\build" -DCMAKE_INSTALL_PREFIX="$prefix" -DSPIRV_HEADERS_ENABLE_TESTS=OFF
+          if ($LASTEXITCODE -ne 0) { throw "SPIRV-Headers configure failed" }
+          cmake --install "$src\build"
+          if ($LASTEXITCODE -ne 0) { throw "SPIRV-Headers install failed" }
+          "CMAKE_PREFIX_PATH=$prefix" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
       - name: Ensure LLVM / libclang for llama-cpp-sys-2 bindgen
         shell: pwsh
         run: |
