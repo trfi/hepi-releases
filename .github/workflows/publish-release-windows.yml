@@ -15,6 +15,7 @@ jobs:
     runs-on: windows-latest
     env:
       CARGO_TARGET_DIR: D:\t
+      CMAKE_BUILD_PARALLEL_LEVEL: "1"
     steps:
       - name: Checkout public repository
         uses: actions/checkout@v4
