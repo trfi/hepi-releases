@@ -45,6 +45,19 @@ jobs:
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Resolve Cargo target dir for rust-cache
+        id: cargo-target
+        shell: pwsh
+        run: |
+          $root = Join-Path $env:GITHUB_WORKSPACE "private-repo/src-tauri"
+          $rel = [IO.Path]::GetRelativePath($root, $env:CARGO_TARGET_DIR)
+          "rel=$rel" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: private-repo/src-tauri -> ${{ steps.cargo-target.outputs.rel }}
+
       - name: setup Vulkan SDK (for Local AI GPU backend)
         shell: pwsh
         run: |
